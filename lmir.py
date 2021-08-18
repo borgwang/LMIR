@@ -18,12 +18,11 @@ class LMIR:
         self.mu = mu
         self.delta = delta
 
-        # Fetch all of the necessary quantities for the document language
-        # models.
-        doc_token_counts = []
-        doc_lens = []
-        doc_p_mls = []
-        all_token_counts = {}
+        # Fetch all of the necessary quantities for the document language model.
+        doc_token_counts = []  # token counts of each doc
+        doc_lens = []  # length of each doc
+        doc_p_mls = []  # maximum-likelihood of each doc (p_ml: {token1: p1, token2: p2, ...}
+        all_token_counts = {}  # count of each token
         for doc in corpus:
             doc_len = len(doc)
             doc_lens.append(doc_len)
@@ -31,7 +30,6 @@ class LMIR:
             for token in doc:
                 token_counts[token] = token_counts.get(token, 0) + 1
                 all_token_counts[token] = all_token_counts.get(token, 0) + 1
-
             doc_token_counts.append(token_counts)
 
             p_ml = {}
@@ -40,6 +38,7 @@ class LMIR:
             doc_p_mls.append(p_ml)
 
         total_tokens = sum(all_token_counts.values())
+        # p_C is maximum-likelihood of the whole corpus
         p_C = {
             token: token_count / total_tokens
             for (token, token_count) in all_token_counts.items()
@@ -53,6 +52,11 @@ class LMIR:
 
     def jelinek_mercer(self, query_tokens):
         """Calculate the Jelinek-Mercer scores for a given query.
+
+        score(q, d) = -log(p(q|d))
+        p(q|d) = p(t_1|d) * p(t_2|d) * ... * p(t_k|d)
+        p(t_i|d) = (1 - lamb) * (TF(t_i, d) / LEN(d)) + lamb * (TF(t_i, C) / LEN(C))
+
         :param query_tokens:
         :return:
         """
@@ -65,11 +69,8 @@ class LMIR:
             for token in query_tokens:
                 if token not in p_C:
                     continue
-
                 score -= log((1 - lamb) * p_ml.get(token, 0) + lamb * p_C[token])
-
             scores.append(score)
-
         return scores
 
     def dirichlet(self, query_tokens):
